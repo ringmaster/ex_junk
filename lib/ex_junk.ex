@@ -7,10 +7,11 @@ defmodule Junk do
   defstruct byte_size: 32,
     prefix: "",
     rand_mod: &:crypto.strong_rand_bytes/1,
-    size: 16
+    size: 16,
+    parameters: []
 
   @doc """
-  Takes a Module (String, Integer) and options, returns junk for that Module.
+  Takes a Module (String, Integer) or a function, and options, returns junk for that Module.
   """
   def junk(_, opts \\ [])
 
@@ -30,6 +31,11 @@ defmodule Junk do
     min = :math.pow(10, opts.size-1) |> trunc
     max = :math.pow(10, opts.size)-1 |> trunc
     Range.new(min,max) |> Enum.random
+  end
+
+  def junk(f, opts) when is_function(f) do
+    opts = construct_opts(opts)
+    apply(f, opts.parameters)
   end
 
   defp construct_opts(opts) do
