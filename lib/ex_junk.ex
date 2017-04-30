@@ -4,15 +4,17 @@ defmodule Junk do
   It is inspired by Dave Brady's [rspec-junklet](https://github.com/dbrady/rspec-junklet)
   """
 
+  require IEx
+
   @chars "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" |> String.split("", trim: true)
 
-  defstruct byte_size: 32,
-    prefix: false,
+  defstruct prefix: false,
     rand_mod: &Enum.random/1,
     size: 16,
     presets: Application.get_all_env(:ex_junk),
     parameters: [],
-    unique: false
+    unique: false,
+    field_types: %{}
 
   @doc """
   Takes a Module (String, Integer) and options, returns junk for that Module.
@@ -32,9 +34,13 @@ defmodule Junk do
   end
 
   def junk(f, opts) when is_function(f) do
-    pick_one(fn(opts) -> 
+    pick_one(fn(opts) ->
       apply(f, opts.parameters)
     end, opts)
+  end
+
+  def junk(Map, opts) do
+    pick_one(&generate_map/1, opts)
   end
 
   def junk(preset_name, opts) when is_atom(preset_name) do
@@ -56,15 +62,30 @@ defmodule Junk do
   end
 
   def generate_string(opts) do
-    Enum.reduce(1..opts.byte_size, [], fn(_i, acc) -> [opts.rand_mod.(@chars) | acc] end)
+    Enum.reduce(1..opts.size, [], fn(_i, acc) -> [opts.rand_mod.(@chars) | acc] end)
     |> Enum.join("")
   end
 
   defp generate_integer(opts) do
     min = :math.pow(10, opts.size-1) |> trunc
     max = :math.pow(10, opts.size)-1 |> trunc
-    Range.new(min, max) 
+    Range.new(min, max)
     |> Enum.random
+  end
+
+  defp generate_map(opts) do
+    opts.field_types
+    |> Map.to_list
+    |> Enum.map(fn({k,v}) ->
+      if is_list(v) do
+        IEx.pry
+        [type, local_opts] = v
+        {k, junk(type, local_opts |> Enum.into(opts))}
+      else
+        {k, junk(v, opts)}
+      end
+    end)
+    |> Enum.into(%{})
   end
 
   defp construct_opts(opts) do

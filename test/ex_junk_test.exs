@@ -50,6 +50,25 @@ defmodule JunkTest do
     assert Kernel.length(digits) == 25
   end
 
+  test "returns Map with simple types" do
+    output = Junk.junk(Map, field_types: %{foo: Integer})
+    assert is_integer(output.foo)
+  end
+
+  test "returns Map with complex types" do
+    output = Junk.junk(Map, field_types: %{foo: [Integer, [size: 4]]})
+    assert is_integer(output.foo)
+    assert length(output.foo |> Integer.digits) == 4
+  end
+
+  test "returns Map with complex types and default opts" do
+    output = Junk.junk(Map, field_types: %{foo: [Integer, [size: 4]], bar: Integer}, size: 10)
+    assert is_integer(output.foo)
+    assert length(output.foo |> Integer.digits) == 4
+    assert is_integer(output.bar)
+    assert length(output.bar |> Integer.digits) == 10
+  end
+
   test "returns a value when a function is used" do
     foo = Junk.junk(fn() -> "foo" end)
     assert "foo" = foo
@@ -69,7 +88,7 @@ defmodule JunkTest do
   end
 
   test "obeys options when returning a preset value when a preset is not defined" do
-    output = Junk.junk(:firstname, byte_size: 10)
+    output = Junk.junk(:firstname, size: 10)
     assert String.length(output) == 20 # incidentally, this seems kind of dumb; why not 10?
   end
 
@@ -87,7 +106,7 @@ defmodule JunkTest do
 
   test "returns are not unique by default" do
     # :ssn always returns the same value.
-    # If this was forced to be unique, it would loop endlessly trying 
+    # If this was forced to be unique, it would loop endlessly trying
     # to find a unique second value.
     output = Junk.junk(:ssn)
     assert "123-45-6789" = output
